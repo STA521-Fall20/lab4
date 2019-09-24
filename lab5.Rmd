@@ -1,0 +1,138 @@
+---
+title: "lab 5: Team [my team #/name here]"
+author: "[My team member names here]"
+date: "September 27, 2019"
+output:
+  pdf_document: default
+---
+
+
+```{r setup, echo=FALSE}
+suppressMessages(library(ISLR))
+suppressMessages(library(arm))
+suppressMessages(library(ggplot2))
+suppressMessages(library(dplyr))
+suppressMessages(library(GGally))
+library(knitr)
+# post on piazza for additional packages if there are wercker build errors due to missing packages
+```
+
+
+
+
+## Preliminaries
+
+Load the college application data from Lab1 and create the variable `Elite` by binning the `Top10perc` variable. We are going to divide universities into two groups based on whether or not the proportion of students coming from the top 10% of their high school classes exceeds 50 %.  We will also save the College names as a new variable and remove `Accept` and `Enroll` as temporally they occur after applying, and do not make sense as predictors in future data.
+
+```{r data}
+data(College)
+College = College %>% 
+  mutate(college = rownames(College)) %>%
+  mutate(Elite = factor(Top10perc > 50)) %>%
+  mutate(Elite = 
+           recode(Elite, 'TRUE' = "Yes", 'FALSE'="No")) %>%
+  select(c(-Accept, -Enroll))
+```
+
+We are going to create a training and test set by randomly splitting the data.  First set a random seed by
+
+```{r setseed}
+# do not change this; for a break google `8675309`
+# smaller numbers for random seeds are preferable
+set.seed(8675309)
+n = nrow(College)
+n.train = floor(.75*n)
+train = sample(1:n, size=n.train, replace=FALSE)
+college.train = College[train,]
+college.test = College[-train,]
+```
+
+
+
+1. Create scatter plots of predictors versus `Apps` using the training data only.  If you use pairs or preferably `ggpairs` make sure that `Apps` is on the y-axis in plots versus the other predictors.  (Make sure that the plots are legible, which may require multiple plots.)  
+Comment on any features in the plots, such as potential outliers, non-linearity, needs for transformations etc.
+
+```{r}
+
+```
+
+
+2.  Build a linear regression model to predict `Apps` from the other predictors using the training data.  Present model summaries and diagnostic plots.   Based on diagnostic plots  using residuals,  discuss the  adequacy of your model.
+
+```{r}
+college.lm1 = lm(Apps ~ . - college, data=college.train)
+```
+
+
+3. Predictive Comparisons with Simulated data
+
+    a) Generate 1000 replicate data sets using the coefficients and estimates of $\sigma$ from the model you fit above.  
+    
+    b) Fit the model to the replicate data and obtain the fitted values.
+
+    c) Using RMSE as a statistic, $\sqrt{\sum_i(y^{\text{rep}} - \hat{y}_i^{\text{rep}})^2/n }$, compute RMSE for each replicate data set. 
+
+    d) Draw a histogram of the RMSE from the simulated data and add a line or point representing the RMSE based on the training data and compute a p-value.  How does the RMSE from the model based on the training data compare to RMSE's based on the replicated data.  What does this suggest about model adequacy?  
+    
+    
+    It will be helpful to write a function to calculate RMSE.  The code below defines a new function
+```{r}
+rmse = function(y, ypred) {
+  rmse = sqrt(mean((y - ypred)^2))
+return(rmse)
+}
+```
+    
+Add comments to the following code    
+    
+```{r setup-sim}
+nsim = 1000
+n = nrow(college.train)
+X = model.matrix(college.lm1)
+sim.lm1 = sim(college.lm1, nsim)  #function from arm to generate coef and variances
+y.rep = y.pred = rep(NA, n)
+rmse.lm1 <- rep(0,nsim)
+```
+
+```{r loop}
+for (i in 1:nsim) {
+  mu = X %*% coef(sim.lm1, slot="coef")[i,] 
+  y.rep = rnorm(n, mean=mu, 
+                sd=sigma.hat(sim.lm1)[i])  #extract sigma sims
+  y.pred = fitted(lm(y.rep ~. -Apps - college, 
+                     data=college.train))
+  rmse.lm1[i] = rmse(y.rep, y.pred)
+}
+
+
+rmse.obs1 <- rmse(college.train$Apps, fitted(college.lm1))
+```
+
+add histogram
+```{r}
+#historgram
+df.lm1 = data.frame(rmse.lm1 = rmse.lm1)
+ggplot(df.lm1, aes(x = rmse.lm1)) + geom_histogram() +
+geom_vline(data = data.frame(val = rmse.obs1,name = "observed rmse model 1"),
+           aes(xintercept = val, col=name),show.legend = T)
+
+#quantile and p-value
+round(quantile(rmse.lm1, c(.025,  .975)), 2)
+mean(rmse.obs1<rmse.lm1)
+
+#  add p-value to plot
+```
+
+
+
+
+
+4. Build a second model, considering transformations of the response and predictors, possible interactions, etc with the goal of trying to achieve  a model where assumptions for linear regression are satisfied, providing justification for your choices.
+Comment on  how well the assumptions are met and and issues that diagnostic plots may reveal.
+
+5.  Repeat the predictive checks described in problem 3, but using your model from problem 4.  If you transform the response, you will need to back transform  data to the original units in order to compute the RMSE in the original units.  Does this suggest that the model is adequate?  Do the two graphs provide information about which model is better?
+
+6. Use your two fitted models to predict the number of applications for the testing data, `college.test`.  Plot the predicted residuals $y_i - \hat{y}_i$  versus the predictions.  Are there any cases where the model does a poor job of predicting?  Compute the RMSE using the test data
+where now RMSE = $\sqrt{\sum_{i = 1}^{n.test}(y_i - \hat{y}_i)^2/n.test}$ where the sum is over the test data.  Which model is better for the out of sample prediction?
+
+7.  Discussion: How would you do a predictive check to compare coverage of the prediction intervals?
