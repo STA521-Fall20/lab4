@@ -1,6 +1,6 @@
-# Lab5: Getting Started
+# Lab4: Getting Started
 
-Go to the github course site. You should have a repo called lab5-WK5-Team-X where the X is your team number or name. Click on the repo's name and then Click on Clone or Download. Copy the URL for the repo for the next step.
+Go to the github course site. You should have a repo called lab4-WK4-Team-X where the X is your team number or name. Click on the repo's name and then Click on Clone or Download. Copy the URL for the repo for the next step.
 
 Open Rstudio on saxon at http://saxon.stat.duke.edu:8787 and login with your netid and password.
 
